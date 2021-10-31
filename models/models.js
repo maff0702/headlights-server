@@ -19,6 +19,7 @@ const Product = sequelize.define('product', {
 const Categories = sequelize.define('categories', {
   id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
   name: {type: DataTypes.STRING, unique: true, allowNull: false},
+  img: {type: DataTypes.STRING, allowNull: false},
 })
 
 const ProductInfo = sequelize.define('product_info', {
@@ -27,7 +28,7 @@ const ProductInfo = sequelize.define('product_info', {
   feature_description: {type: DataTypes.STRING, allowNull: false},
 })
 
-Product.hasMany(ProductInfo)
+Product.hasMany(ProductInfo, {as: 'info'})
 ProductInfo.belongsTo(Product)
 
 Categories.hasMany(Product)

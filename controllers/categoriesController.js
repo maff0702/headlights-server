@@ -5,12 +5,12 @@ const path = require('path')
 
 class CategoriesController {
 
-  async create(req, res) {
+  async create(req, res, next) {
     try{
         const {name} = req.body
-        const {img} = req.files
+        const img = req.files?.img
         let fileName = uuid.v4() + ".jpg"
-        img.mv(path.resolve(__dirname, '..', 'static', fileName))
+        if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))
 
         const category = await Categories.create({name, img: fileName})
         return res.json(category)
@@ -19,19 +19,40 @@ class CategoriesController {
       }
   }
 
-  async getAll(req, res) {
-    const categoriesAll = await Categories.findAll()
-    return res.json(categoriesAll)
+  async getAll(req, res, next) {
+    try {
+      const categoriesAll = await Categories.findAll()
+      return res.json(categoriesAll)
+    } catch (e) {
+      next(ApiError.internal(e.message))
+    }
   }
 
-  async update(req, res) {
-    const {name, img} = req.body
-    const category = await Categories.findByIdAndUpdate(req.params.id, req.body, {name, img})
-    return res.json(category)
+  async update(req, res, next) {
+    try {
+      const id = req.params.id
+      const {name} = req.body
+      const img = req.files?.img
+      let fileName = uuid.v4() + ".jpg"
+      if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))
+      let category
+
+      if(name) category = await Categories.update({name}, {where: {id}, returning: true,})
+      if(img) category = await Categories.update({img: fileName}, {where: {id}, returning: true,})
+      return res.json(category)
+    } catch (e) {
+      next(ApiError.badRequest(e.message))
+    }
   }
 
-  async delete(req, res) {
-
+  async delete(req, res, next) {
+    try {
+      const id = req.params.id
+      await Categories.destroy({where: {id}})
+      return res.json({message: 'success'})
+    } catch (e) {
+      next(ApiError.badRequest(e.message))
+    }
   }
 }
 

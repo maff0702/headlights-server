@@ -12,8 +12,7 @@ const Product = sequelize.define('product', {
   id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
   name: {type: DataTypes.STRING, allowNull: false},
   price: {type: DataTypes.INTEGER},
-  description: {type: DataTypes.STRING},
-  img: {type: DataTypes.STRING, allowNull: false},
+  description: {type: DataTypes.STRING}
 })
 
 const Categories = sequelize.define('categories', {
@@ -28,8 +27,16 @@ const ProductInfo = sequelize.define('product_info', {
   feature_description: {type: DataTypes.STRING, allowNull: false},
 })
 
+const ProductImg = sequelize.define('product_img', {
+  id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+  name: {type: DataTypes.STRING, allowNull: false},
+})
+
 Product.hasMany(ProductInfo, {as: 'info'})
 ProductInfo.belongsTo(Product)
+
+Product.hasMany(ProductImg, {as: 'img'})
+ProductImg.belongsTo(Product)
 
 Categories.hasMany(Product)
 Product.belongsTo(Categories)
@@ -38,5 +45,6 @@ module.exports = {
   User,
   Product,
   Categories,
-  ProductInfo
+  ProductInfo,
+  ProductImg
 }

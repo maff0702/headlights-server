@@ -12,7 +12,9 @@ const Product = sequelize.define('product', {
   id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
   name: {type: DataTypes.STRING, allowNull: false},
   price: {type: DataTypes.INTEGER},
-  description: {type: DataTypes.STRING}
+  description: {type: DataTypes.STRING},
+  vcode: {type: DataTypes.STRING},
+  group: {type: DataTypes.STRING}
 })
 
 const Categories = sequelize.define('categories', {

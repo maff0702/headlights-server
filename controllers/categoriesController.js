@@ -30,8 +30,7 @@ class CategoriesController {
 
   async update(req, res, next) {
     try {
-      const id = req.params.id
-      const {name} = req.body
+      const {id, name} = req.body
       const img = req.files?.img
       let fileName = uuid.v4() + ".jpg"
       if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))

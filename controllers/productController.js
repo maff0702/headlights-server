@@ -9,8 +9,8 @@ class ProductController {
   async create(req, res, next) {
     try {
       let {name, price, description, categoryId, info, vcode, group} = req.body
-      const img = req.files.img ? req.files.img : null
-      const mainImg = req.files.mainImg ? req.files.mainImg : null
+      const img = req.files ? req.files.img : null
+      const mainImg = req.files ? req.files.mainImg : null
       price = +price
       categoryId= +categoryId
       if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
@@ -21,8 +21,8 @@ class ProductController {
       if(mainImg){
         fileNameMainImg = uuid.v4() + ".png"
         mainImg.mv(path.resolve(__dirname, '..', 'static', fileNameMainImg))
+        imageUpdate.imageUpdateSize(`static/${fileNameMainImg}`)
       }
-      imageUpdate.imageUpdateSize(`static/${fileNameMainImg}`)
       const product = await Product.create({name, mainImg: fileNameMainImg, price, description, categoryId, vcode, group})
 
       if(img){
@@ -117,14 +117,14 @@ class ProductController {
     try {
       let {id, name, description, price, categoryId, vcode, group} = req.body
       let product
-      const img = req.files.img ? req.files.img : null
+      const img = req.files ? req.files.img : null
       let fileName = uuid.v4() + ".png"
       if(img) {
         await img.mv(path.resolve(__dirname, '..', 'static', fileName))
         imageUpdate.imageUpdateSize(`static/${fileName}`)
       }
       const verifyProduct = await Product.findOne({where: {name}})
-      if(verifyProduct && verifyProduct?.dataValues?.id !== +id) return next(ApiError.badRequest('Продукт с таким именем уже существует'))
+      if(verifyProduct && verifyProduct.dataValues.id !== +id) return next(ApiError.badRequest('Продукт с таким именем уже существует'))
 
       if(name) product = await Product.update({name}, {where: {id}, returning: true})
         else return next(ApiError.badRequest('Название не должно быть пустым'))
@@ -156,7 +156,7 @@ class ProductController {
   async createImg(req, res, next) {
     try {
       const {productId} = req.body
-      const img = req.files.img ? req.files.img : null
+      const img = req.files ? req.files.img : null
       let fileName
       const newImg = []
       if(img){

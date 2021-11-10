@@ -9,7 +9,7 @@ class CategoriesController {
   async create(req, res, next) {
     try{
         const {name} = req.body
-        const img = req.files.img ? req.files.img : null
+        const img = req.files ? req.files.img : null
         if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
         if(!img) return next(ApiError.badRequest('Добавьте изображение'))
         const verifyCategory = await Categories.findOne({where: {name}})
@@ -36,10 +36,10 @@ class CategoriesController {
   async update(req, res, next) {
     try {
       const {name} = req.body
-      const img = req.files.img ? req.files.img : null
+      const img = req.files ? req.files.img : null
       const {id} = req.params
       const verifyCategory = await Categories.findOne({where: {name}})
-      if(verifyCategory && verifyCategory?.dataValues?.id !== +id) return next(ApiError.badRequest('Такая категория уже существует'))
+      if(verifyCategory && verifyCategory.dataValues.id !== +id) return next(ApiError.badRequest('Такая категория уже существует'))
       let fileName = uuid.v4() + ".png"
       if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))
       imageUpdate.imageUpdateSize(`static/${fileName}`)

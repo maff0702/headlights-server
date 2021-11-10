@@ -9,7 +9,7 @@ class CategoriesController {
   async create(req, res, next) {
     try{
         const {name} = req.body
-        const img = req.files?.img
+        const img = req.files.img ? req.files.img : null
         if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
         if(!img) return next(ApiError.badRequest('Добавьте изображение'))
         const verifyCategory = await Categories.findOne({where: {name}})
@@ -36,7 +36,7 @@ class CategoriesController {
   async update(req, res, next) {
     try {
       const {name} = req.body
-      const img = req.files?.img
+      const img = req.files.img ? req.files.img : null
       const {id} = req.params
       const verifyCategory = await Categories.findOne({where: {name}})
       if(verifyCategory && verifyCategory?.dataValues?.id !== +id) return next(ApiError.badRequest('Такая категория уже существует'))

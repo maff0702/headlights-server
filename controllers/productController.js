@@ -9,8 +9,8 @@ class ProductController {
   async create(req, res, next) {
     try {
       let {name, price, description, categoryId, info, vcode, group} = req.body
-      const img = req.files?.img
-      const mainImg = req.files?.mainImg
+      const img = req.files.img ? req.files.img : null
+      const mainImg = req.files.mainImg ? req.files.mainImg : null
       price = +price
       categoryId= +categoryId
       if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
@@ -117,7 +117,7 @@ class ProductController {
     try {
       let {id, name, description, price, categoryId, vcode, group} = req.body
       let product
-      const img = req.files?.img
+      const img = req.files.img ? req.files.img : null
       let fileName = uuid.v4() + ".png"
       if(img) {
         await img.mv(path.resolve(__dirname, '..', 'static', fileName))
@@ -156,7 +156,7 @@ class ProductController {
   async createImg(req, res, next) {
     try {
       const {productId} = req.body
-      const img = req.files?.img
+      const img = req.files.img ? req.files.img : null
       let fileName
       const newImg = []
       if(img){

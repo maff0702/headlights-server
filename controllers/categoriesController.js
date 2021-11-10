@@ -2,6 +2,7 @@ const {Categories} = require('../models/models')
 const ApiError = require('../error/ApiError')
 const uuid = require('uuid')
 const path = require('path')
+const imageUpdate = require('../utils/imageUpdate')
 
 class CategoriesController {
 
@@ -9,9 +10,13 @@ class CategoriesController {
     try{
         const {name} = req.body
         const img = req.files?.img
-        let fileName = uuid.v4() + ".jpg"
-        if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))
-
+        if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
+        if(!img) return next(ApiError.badRequest('Добавьте изображение'))
+        const verifyCategory = await Categories.findOne({where: {name}})
+        if(verifyCategory) return next(ApiError.badRequest('Такая категория уже существует'))
+        let fileName = uuid.v4() + ".png"
+        if(img) await img.mv(path.resolve(__dirname, '..', 'static', fileName))
+        imageUpdate.imageUpdateSize(`static/${fileName}`)
         const category = await Categories.create({name, img: fileName})
         return res.json(category)
       } catch (e) {
@@ -30,10 +35,14 @@ class CategoriesController {
 
   async update(req, res, next) {
     try {
-      const {id, name} = req.body
+      const {name} = req.body
       const img = req.files?.img
-      let fileName = uuid.v4() + ".jpg"
+      const {id} = req.params
+      const verifyCategory = await Categories.findOne({where: {name}})
+      if(verifyCategory && verifyCategory?.dataValues?.id !== +id) return next(ApiError.badRequest('Такая категория уже существует'))
+      let fileName = uuid.v4() + ".png"
       if(img) img.mv(path.resolve(__dirname, '..', 'static', fileName))
+      imageUpdate.imageUpdateSize(`static/${fileName}`)
       let category
 
       if(name) category = await Categories.update({name}, {where: {id}, returning: true,})
@@ -47,8 +56,9 @@ class CategoriesController {
   async delete(req, res, next) {
     try {
       const id = req.params.id
+      const currentCategory = await Categories.findOne({where: {id}})
       await Categories.destroy({where: {id}})
-      return res.json({message: 'success'})
+      return res.json(currentCategory)
     } catch (e) {
       next(ApiError.badRequest(e.message))
     }

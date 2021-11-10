@@ -2,25 +2,41 @@ const {Product, ProductInfo, ProductImg} = require('../models/models')
 const ApiError = require('../error/ApiError')
 const uuid = require('uuid')
 const path = require('path')
+const { Sequelize } = require('sequelize')
+const imageUpdate = require('../utils/imageUpdate')
 
 class ProductController {
   async create(req, res, next) {
     try {
-      const {name, price, description, categoryId, info, vcode, group} = req.body
+      let {name, price, description, categoryId, info, vcode, group} = req.body
       const img = req.files?.img
-
-      const product = await Product.create({name, price, description, categoryId, vcode, group})
+      const mainImg = req.files?.mainImg
+      price = +price
+      categoryId= +categoryId
+      if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
+      if(!categoryId) return next(ApiError.badRequest('Выберите категорию'))
+      const verifyProduct = await Product.findOne({where: {name}})
+      if(verifyProduct) return next(ApiError.badRequest('Продукт с таким названием уже существует'))
+      let fileNameMainImg = "no-image.png"
+      if(mainImg){
+        fileNameMainImg = uuid.v4() + ".png"
+        mainImg.mv(path.resolve(__dirname, '..', 'static', fileNameMainImg))
+      }
+      imageUpdate.imageUpdateSize(`static/${fileNameMainImg}`)
+      const product = await Product.create({name, mainImg: fileNameMainImg, price, description, categoryId, vcode, group})
 
       if(img){
-        if(Array.isArray(img)) {
+        if(Array.isArray(img) && img.length > 1) {
           img.forEach(e => {
             let fileName = uuid.v4() + ".png"
             e.mv(path.resolve(__dirname, '..', 'static', fileName))
+            imageUpdate.imageUpdateSize(`static/${fileName}`)
             ProductImg.create({productId: product.id, name: fileName})
           })
         } else {
           let fileName = uuid.v4() + ".png"
           img.mv(path.resolve(__dirname, '..', 'static', fileName))
+          imageUpdate.imageUpdateSize(`static/${fileName}`)
           ProductImg.create({productId: product.id, name: fileName})
         }
       }
@@ -54,21 +70,26 @@ class ProductController {
         products = await Product.findAndCountAll({where: {group}, limit, include: [
           {model: ProductInfo, as: 'info'},
           {model: ProductImg, as: 'img'}
-        ]})
+        ],distinct:true})
       }
       if(search && search !=="undefined") {
-        const productsAll = await Product.findAndCountAll({limit, include: [
+        limit = limit || 5
+        const productsAll = await Product.findAndCountAll({include: [
           {model: ProductInfo, as: 'info'},
           {model: ProductImg, as: 'img'}
-        ]})
-        limit = limit || 5
-        products = productsAll.filter(item => item.name.includes(search)).slice(0, limit)
+        ],distinct:true})
+        const rows = productsAll.rows.filter(item => item.name.toLowerCase().includes(search.toLowerCase()))
+        const toSlice = Number(offset)*page;
+        products = {
+          count: rows.length,
+          rows: rows.slice(offset, toSlice === 0 ? limit : toSlice),
+        }
       }
       if(categoryId && categoryId !=="undefined"){
         products = await Product.findAndCountAll({where: {categoryId}, limit, offset, include: [
           {model: ProductInfo, as: 'info'},
           {model: ProductImg, as: 'img'}
-        ]})
+        ],distinct:true})
       }
       return res.json(products)
     } catch (e) {
@@ -78,9 +99,9 @@ class ProductController {
 
   async getOne(req, res, next) {
     try {
-      const {id} = req.params
+      const {name} = req.params
       const product = await Product.findOne({
-        where: {id},
+        where: {$and: Sequelize.where(Sequelize.fn('lower', Sequelize.col('name')), Sequelize.fn('lower', name))},
         include: [
           {model: ProductInfo, as: 'info'},
           {model: ProductImg, as: 'img'}
@@ -94,16 +115,29 @@ class ProductController {
 
   async update(req, res, next) {
     try {
-      const {id, name, description, price, categoryId, vcode, group} = req.body
+      let {id, name, description, price, categoryId, vcode, group} = req.body
       let product
+      const img = req.files?.img
+      let fileName = uuid.v4() + ".png"
+      if(img) {
+        await img.mv(path.resolve(__dirname, '..', 'static', fileName))
+        imageUpdate.imageUpdateSize(`static/${fileName}`)
+      }
+      const verifyProduct = await Product.findOne({where: {name}})
+      if(verifyProduct && verifyProduct?.dataValues?.id !== +id) return next(ApiError.badRequest('Продукт с таким именем уже существует'))
 
       if(name) product = await Product.update({name}, {where: {id}, returning: true})
-      if(description) product = await Product.update({description}, {where: {id}, returning: true})
-      if(price) product = await Product.update({price}, {where: {id}, returning: true})
-      if(categoryId) product = await Product.update({categoryId}, {where: {id}, returning: true})
-      if(vcode) product = await Product.update({vcode}, {where: {id}, returning: true})
-      if(group) product = await Product.update({group}, {where: {id}, returning: true})
-      return res.json(product)
+        else return next(ApiError.badRequest('Название не должно быть пустым'))
+      if(img) product = await Product.update({mainImg: fileName}, {where: {id}, returning: true})
+
+      product = await Product.update(
+        {description, price: +price, categoryId, vcode, group}, {where: {id}, returning: true})
+
+      name = product[1][0].name
+      product = await Product.findOne({ where: {name},
+        include: [{model: ProductInfo, as: 'info'},
+          {model: ProductImg, as: 'img'}]})
+      return res.json({ product })
     } catch (e) {
       next(ApiError.badRequest(e.message))
     }
@@ -123,22 +157,27 @@ class ProductController {
     try {
       const {productId} = req.body
       const img = req.files?.img
-
+      let fileName
+      const newImg = []
       if(img){
         if(Array.isArray(img)) {
-          img.forEach(e => {
-            let fileName = uuid.v4() + ".png"
+          img.forEach((e, i) => {
+            fileName = uuid.v4() + ".png"
             e.mv(path.resolve(__dirname, '..', 'static', fileName))
+            imageUpdate.imageUpdateSize(`static/${fileName}`)
             ProductImg.create({productId, name: fileName})
+            newImg.push({productId, name: fileName})
           })
         } else {
-          let fileName = uuid.v4() + ".png"
+          fileName = uuid.v4() + ".png"
           img.mv(path.resolve(__dirname, '..', 'static', fileName))
+          imageUpdate.imageUpdateSize(`static/${fileName}`)
           ProductImg.create({productId, name: fileName})
+          newImg.push({productId, name: fileName})
         }
-      }
-      const image = await ProductImg.findAll({where: {productId}})
-      return res.json(image)
+      } else throw Error('Добавтье изображение')
+      // const image = await ProductImg.findAll()
+      return res.json({newImg})
     } catch (e) {
       next(ApiError.badRequest(e.message))
     }
@@ -147,9 +186,8 @@ class ProductController {
   async deleteImg(req, res, next) {
     try {
       const id = req.params.id
-      console.log(id);
       await ProductImg.destroy({where: {id}})
-      return res.json({message: 'success'})
+      return res.json({message: 'success', id: +id})
     } catch (e) {
       next(ApiError.badRequest(e.message))
     }
@@ -158,12 +196,13 @@ class ProductController {
   async createInfo(req, res, next) {
     try {
       const {productId, title, description} = req.body
-
-      const info = await ProductInfo.create({
+      let info
+      if(title, description) info = await ProductInfo.create({
         productId,
         feature_title: title,
         feature_description: description
       })
+        else throw Error('Поле не должно быть пустым')
 
       return res.json(info)
     } catch (e) {
@@ -179,10 +218,11 @@ class ProductController {
         feature_title: title,
         feature_description: description
       }, {where: {id}, returning: true})
+        else throw Error('Поле не должно быть пустым')
       
-      return res.json(info)
+      return res.json(info[1][0])
     } catch (e) {
-      next(ApiError.badRequest(e.message))
+      next(ApiError.internal(e.message))
     }
   }
 
@@ -190,7 +230,7 @@ class ProductController {
     try {
       const id = req.params.id
       await ProductInfo.destroy({where: {id}})
-      return res.json({message: 'success'})
+      return res.json({message: 'success', id: +id})
     } catch (e) {
       next(ApiError.badRequest(e.message))
     }

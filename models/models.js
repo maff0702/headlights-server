@@ -1,3 +1,4 @@
+const { Sequelize } = require('sequelize')
 const sequelize = require('../db')
 const {DataTypes} = require('sequelize')
 
@@ -10,9 +11,11 @@ const User = sequelize.define('user', {
 
 const Product = sequelize.define('product', {
   id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-  name: {type: DataTypes.STRING, allowNull: false},
+  name: {type: DataTypes.STRING, unique: true, allowNull: false},
+  mainImg: {type: DataTypes.STRING},
   price: {type: DataTypes.INTEGER},
-  description: {type: DataTypes.STRING},
+  // description: {type: DataTypes.STRING},
+  description: {type: Sequelize.TEXT},
   vcode: {type: DataTypes.STRING},
   group: {type: DataTypes.STRING}
 })

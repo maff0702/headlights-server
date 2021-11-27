@@ -8,7 +8,8 @@ class CategoriesController {
 
   async create(req, res, next) {
     try{
-        const {name} = req.body
+        let {name} = req.body
+        name = name.trim();
         const img = req.files ? req.files.img : null
         if(name === '') return next(ApiError.badRequest('Название не должно быть пустым'))
         if(!img) return next(ApiError.badRequest('Добавьте изображение'))

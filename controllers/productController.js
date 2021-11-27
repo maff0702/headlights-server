@@ -9,6 +9,7 @@ class ProductController {
   async create(req, res, next) {
     try {
       let {name, price, description, categoryId, info, vcode, group} = req.body
+      name = name.trim();
       const img = req.files ? req.files.img : null
       const mainImg = req.files ? req.files.mainImg : null
       price = +price
@@ -65,7 +66,6 @@ class ProductController {
       page = page || 1
       let offset = page * limit - limit
       let products
-      
       if(group && group !=="undefined") {
         products = await Product.findAndCountAll({where: {group}, limit, include: [
           {model: ProductInfo, as: 'info'},

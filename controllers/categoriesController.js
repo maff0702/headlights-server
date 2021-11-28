@@ -37,6 +37,7 @@ class CategoriesController {
   async update(req, res, next) {
     try {
       const {name} = req.body
+      name = name.trim();
       const img = req.files ? req.files.img : null
       const {id} = req.params
       const verifyCategory = await Categories.findOne({where: {name}})

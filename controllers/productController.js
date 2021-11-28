@@ -116,6 +116,7 @@ class ProductController {
   async update(req, res, next) {
     try {
       let {id, name, description, price, categoryId, vcode, group} = req.body
+      name = name.trim();
       let product
       const img = req.files ? req.files.img : null
       let fileName = uuid.v4() + ".png"
